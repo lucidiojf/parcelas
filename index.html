@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Compras Parceladas</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #009688;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 480px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+        .header {
+            color: #00796b;
+            border-bottom: 2px solid #009688;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        label { display: block; margin: 8px 0 4px; font-size: 13px; color: #555; font-weight: 600; }
+        input {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #009688;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 14px;
+            font-weight: bold;
+        }
+        button:hover { background-color: #00796b; }
+        .btn-sec {
+            background-color: #e0f2f1;
+            color: #004d40;
+            border: 1px solid #009688;
+            padding: 6px 10px;
+            font-size: 12px;
+            width: auto;
+            margin-top: 0;
+        }
+        .total-info {
+            background: #e0f2f1;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #004d40;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .devedor-info {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffe0b2;
+        }
+        .projeto-box {
+            border: 2px solid #009688;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 14px;
+            background: #fff;
+        }
+        .projeto-titulo {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00796b;
+            border-bottom: 1px solid #b2dfdb;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .objeto-subcard {
+            border-left: 4px solid #009688;
+            background: #fafafa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .objeto-topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #222;
+            font-size: 14px;
+        }
+        .badge-cartao {
+            background: #009688;
+            color: white;
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+        .objeto-resumo {
+            font-size: 12px;
+            color: #444;
+            margin: 5px 0 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .parcela-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 8px;
+            border-bottom: 1px solid #eee;
+            background: #ffffff;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .parcela-item input[type="checkbox"] { width: auto; margin-right: 8px; cursor: pointer; transform: scale(1.15); }
+        .paga { text-decoration: line-through; color: #777; background: #e8f5e9; }
+        .sync-bar { font-size: 11px; color: #004d40; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .toggle-btn { background: none; border: none; color: #00796b; font-size: 12px; padding: 0; margin: 4px 0; width: auto; text-align: left; text-decoration: underline; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; padding: 15px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<!-- Card de Resumo Geral e Projetos Ativos -->
+<div class="card">
+    <div class="sync-bar">
+        <span id="statusSync">Pronto</span>
+        <button class="btn-sec" onclick="abrirConfig()">⚙ GitHub</button>
+    </div>
+
+    <div class="header">
+        <span>RESUMO GERAL</span>
+        <button class="btn-sec" onclick="toggleForm()">+ Novo Objeto</button>
+    </div>
+
+    <div class="total-info devedor-info">
+        <span>Saldo Devedor Geral:</span>
+        <span id="geralDevedor">R$ 0,00</span>
+    </div>
+    <div class="total-info">
+        <span>Total Já Pago:</span>
+        <span id="geralPago">R$ 0,00</span>
+    </div>
+
+    <!-- Formulário de Cadastro (baseado no seu HTML original) -->
+    <div id="formNovo" style="display:none; border-top: 2px dashed #009688; padding-top: 10px; margin-top: 10px;">
+        <div class="header" style="font-size: 14px;">ADICIONAR OBJETO AO PROJETO</div>
+
+        <label>Projeto (ex: Celular Moto Razr + Notebook)</label>
+        <input type="text" id="nomeProjeto" placeholder="Agrupador do projeto" list="listaProjetosExistentes">
+        <datalist id="listaProjetosExistentes"></datalist>
+
+        <label>Nome objeto</label>
+        <input type="text" id="nomeObjeto" placeholder="Ex: Notebook">
+
+        <label>Vlr Total (Moeda)</label>
+        <input type="number" step="0.01" id="vlrTotal" placeholder="0.00">
+
+        <label>Qtde parcelas (Inteiro - ex: 8 ou 10)</label>
+        <input type="number" id="qtdParcelas" placeholder="Ex: 10">
+
+        <label>Cartão de Crédito</label>
+        <input type="text" id="cartao" placeholder="Ex: Felipe">
+
+        <label>Início (Data da 1ª Parcela)</label>
+        <input type="date" id="dataInicio">
+
+        <label>Parcelas já pagas (opcional)</label>
+        <input type="number" id="qtdPagas" value="0" min="0">
+
+        <button onclick="adicionarObjeto()">Salvar e Sincronizar</button>
+    </div>
+
+    <div id="containerProjetos" style="margin-top: 14px;"></div>
+</div>
+
+<!-- Modal Configuração GitHub -->
+<div id="modalGitHub" class="modal">
+    <div class="card" style="margin: 30px auto;">
+        <div class="header">CONEXÃO GITHUB (dados.json)</div>
+        <label>Usuário GitHub</label>
+        <input type="text" id="ghUser" placeholder="lucidiojf">
+        <label>Repositório</label>
+        <input type="text" id="ghRepo" placeholder="parcelas">
+        <label>Token (Personal Access Token)</label>
+        <input type="password" id="ghToken" placeholder="ghp_...">
+        <button onclick="salvarConfigGitHub()">Salvar Conexão</button>
+        <button class="btn-sec" style="width:100%; margin-top:8px;" onclick="document.getElementById('modalGitHub').style.display='none'">Fechar</button>
+    </div>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) tg.expand();
+
+let fileSha = null;
+let abertos = {};
+
+// Exemplo inicial já estruturado com os 2 objetos (8x e 10x)
+let projetos = [
+    {
+        id: "proj_1",
+        nome: "Celular Moto Razr + Notebook",
+        objetos: [
+            {
+                id: "obj_1",
+                nome: "Celular Moto Razr",
+                valorTotal: 7709.36,
+                qtd: 8,
+                cartao: "Felipe",
+                parcelas: gerarListaParcelas(7709.36, 8, "2025-12-10", 8)
+            },
+            {
+                id: "obj_2",
+                nome: "Notebook",
+                valorTotal: 4500.00,
+                qtd: 10,
+                cartao: "Felipe",
+                parcelas: gerarListaParcelas(4500.00, 10, "2025-12-10", 8)
+            }
+        ]
+    }
+];
+
+function gerarListaParcelas(total, qtd, dataInicioStr, pagasIniciais = 0) {
+    const valorUnitario = Number((total / qtd).toFixed(2));
+    const [ano, mes, dia] = dataInicioStr.split("-").map(Number);
+    const lista = [];
+    for (let i = 0; i < qtd; i++) {
+        const dt = new Date(ano, (mes - 1) + i, dia);
+        lista.push({
+            numero: i + 1,
+            valor: valorUnitario,
+            vencimento: dt.toLocaleDateString("pt-BR"),
+            paga: (i + 1) <= pagasIniciais
+        });
+    }
+    return lista;
+}
+
+function moeda(v) {
+    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function toggleForm() {
+    const f = document.getElementById("formNovo");
+    f.style.display = f.style.display === "none" ? "block" : "none";
+}
+
+function abrirConfig() {
+    document.getElementById("ghUser").value = localStorage.getItem("gh_user") || "lucidiojf";
+    document.getElementById("ghRepo").value = localStorage.getItem("gh_repo") || "parcelas";
+    document.getElementById("ghToken").value = localStorage.getItem("gh_token") || "";
+    document.getElementById("modalGitHub").style.display = "block";
+}
+
+function salvarConfigGitHub() {
+    localStorage.setItem("gh_user", document.getElementById("ghUser").value.trim());
+    localStorage.setItem("gh_repo", document.getElementById("ghRepo").value.trim());
+    localStorage.setItem("gh_token", document.getElementById("ghToken").value.trim());
+    document.getElementById("modalGitHub").style.display = "none";
+    carregarGitHub();
+}
+
+async function carregarGitHub() {
+    const user = localStorage.getItem("gh_user");
+    const repo = localStorage.getItem("gh_repo");
+    const token = localStorage.getItem("gh_token");
+
+    if (!user || !repo || !token) {
+        const cache = localStorage.getItem("memento_parcelas_db");
+        if (cache) projetos = JSON.parse(cache);
+        document.getElementById("statusSync").innerText = "Modo Local (Configure GitHub)";
+        renderizar();
+        return;
+    }
+
+    document.getElementById("statusSync").innerText = "Sincronizando...";
+    try {
+        const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/dados.json?t=${Date.now()}`, {
+            headers: { Authorization: `token ${token}` }
+        });
+        if (res.ok) {
+            const json = await res.json();
+            fileSha = json.sha;
+            projetos = JSON.parse(decodeURIComponent(escape(atob(json.content))));
+            localStorage.setItem("memento_parcelas_db", JSON.stringify(projetos));
+            document.getElementById("statusSync").innerText = "Sincronizado com GitHub ✓";
+        } else {
+            document.getElementById("statusSync").innerText = "Criará dados.json ao salvar";
+        }
+    } catch (e) {
+        document.getElementById("statusSync").innerText = "Offline (usando cache)";
+    }
+    renderizar();
+}
+
+async function salvarGitHub() {
+    localStorage.setItem("memento_parcelas_db", JSON.stringify(projetos));
+    const user = localStorage.getItem("gh_user");
+    const repo = localStorage.getItem("gh_repo");
+    const token = localStorage.getItem("gh_token");
+    if (!user || !repo || !token) return;
+
+    document.getElementById("statusSync").innerText = "Salvando no GitHub...";
+    try {
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(projetos, null, 2))));
+        const body = { message: "Atualização de parcelas", content };
+        if (fileSha) body.sha = fileSha;
+
+        const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/dados.json`, {
+            method: "PUT",
+            headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.content?.sha) fileSha = data.content.sha;
+        document.getElementById("statusSync").innerText = "Salvo no GitHub ✓";
+    } catch (e) {
+        document.getElementById("statusSync").innerText = "Erro ao salvar";
+    }
+}
+
+function adicionarObjeto() {
+    const nomeProj = document.getElementById("nomeProjeto").value.trim();
+    const nomeObj = document.getElementById("nomeObjeto").value.trim();
+    const total = parseFloat(document.getElementById("vlrTotal").value);
+    const qtd = parseInt(document.getElementById("qtdParcelas").value);
+    const cartao = document.getElementById("cartao").value.trim() || "Cartão";
+    const inicio = document.getElementById("dataInicio").value;
+    const pagas = parseInt(document.getElementById("qtdPagas").value) || 0;
+
+    if (!nomeProj || !nomeObj || !total || !qtd || !inicio) {
+        alert("Preencha todos os campos obrigatórios.");
+        return;
+    }
+
+    const novoObj = {
+        id: "obj_" + Date.now(),
+        nome: nomeObj,
+        valorTotal: total,
+        qtd: qtd,
+        cartao: cartao,
+        parcelas: gerarListaParcelas(total, qtd, inicio, pagas)
+    };
+
+    const existente = projetos.find(p => p.nome.toLowerCase() === nomeProj.toLowerCase());
+    if (existente) {
+        existente.objetos.push(novoObj);
+    } else {
+        projetos.push({ id: "proj_" + Date.now(), nome: nomeProj, objetos: [novoObj] });
+    }
+
+    renderizar();
+    salvarGitHub();
+    toggleForm();
+}
+
+function alternarParcela(pIdx, oIdx, parcIdx) {
+    projetos[pIdx].objetos[oIdx].parcelas[parcIdx].paga = !projetos[pIdx].objetos[oIdx].parcelas[parcIdx].paga;
+    renderizar();
+    salvarGitHub();
+}
+
+function toggleParcelasObj(id) {
+    abertos[id] = !(abertos[id] ?? true);
+    renderizar();
+}
+
+function renderizar() {
+    const container = document.getElementById("containerProjetos");
+    const datalist = document.getElementById("listaProjetosExistentes");
+    container.innerHTML = "";
+    datalist.innerHTML = "";
+
+    let somaGeralDevedor = 0;
+    let somaGeralPago = 0;
+
+    projetos.forEach((proj, pIdx) => {
+        const opt = document.createElement("option");
+        opt.value = proj.nome;
+        datalist.appendChild(opt);
+
+        let projDevedor = 0;
+        let projPago = 0;
+
+        proj.objetos.forEach(o => {
+            o.parcelas.forEach(p => {
+                if (p.paga) { somaGeralPago += p.valor; projPago += p.valor; }
+                else { somaGeralDevedor += p.valor; projDevedor += p.valor; }
+            });
+        });
+
+        const box = document.createElement("div");
+        box.className = "projeto-box";
+        box.innerHTML = `
+            <div class="projeto-titulo">
+                <span>${proj.nome}</span>
+                <span style="font-size:12px;">Devedor: ${moeda(projDevedor)}</span>
+            </div>
+        `;
+
+        proj.objetos.forEach((obj, oIdx) => {
+            const pagasCount = obj.parcelas.filter(p => p.paga).length;
+            const objDevedor = obj.parcelas.filter(p => !p.paga).reduce((a, b) => a + b.valor, 0);
+            const isOpen = abertos[obj.id] ?? (pagasCount < obj.qtd);
+
+            const sub = document.createElement("div");
+            sub.className = "objeto-subcard";
+            sub.innerHTML = `
+                <div class="objeto-topo">
+                    <span>${oIdx + 1}. ${obj.nome} (${pagasCount}/${obj.qtd}x)</span>
+                    <span class="badge-cartao">${obj.cartao}</span>
+                </div>
+                <div class="objeto-resumo">
+                    <span>Total: <b>${moeda(obj.valorTotal)}</b></span>
+                    <span>Devedor: <b style="color:#e65100;">${moeda(objDevedor)}</b></span>
+                </div>
+                <button class="toggle-btn" onclick="toggleParcelasObj('${obj.id}')">
+                    ${isOpen ? "▲ Recolher checklist" : "▼ Mostrar checklist (" + obj.qtd + " parcelas)"}
+                </button>
+            `;
+
+            if (isOpen) {
+                const listaDiv = document.createElement("div");
+                listaDiv.style.marginTop = "6px";
+                obj.parcelas.forEach((parc, parcIdx) => {
+                    const row = document.createElement("div");
+                    row.className = `parcela-item ${parc.paga ? "paga" : ""}`;
+                    row.innerHTML = `
+                        <span><strong>${parc.numero}ª/${obj.qtd}</strong> (${parc.vencimento}) — ${moeda(parc.valor)}</span>
+                        <input type="checkbox" ${parc.paga ? "checked" : ""} onchange="alternarParcela(${pIdx}, ${oIdx}, ${parcIdx})">
+                    `;
+                    listaDiv.appendChild(row);
+                });
+                sub.appendChild(listaDiv);
+            }
+
+            box.appendChild(sub);
+        });
+
+        container.appendChild(box);
+    });
+
+    document.getElementById("geralDevedor").innerText = moeda(somaGeralDevedor);
+    document.getElementById("geralPago").innerText = moeda(somaGeralPago);
+}
+
+carregarGitHub();
+</script>
+</body>
+</html>
