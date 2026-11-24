@@ -1,0 +1,44 @@
+[
+  {
+    "id": "proj_1",
+    "nome": "Celular Moto Razr + Notebook",
+    "objetos": [
+      {
+        "id": "obj_1",
+        "nome": "Celular Moto Razr",
+        "valorTotal": 7709.36,
+        "qtd": 8,
+        "cartao": "Felipe",
+        "parcelas": [
+          { "numero": 1, "valor": 963.67, "vencimento": "10/12/2025", "paga": true },
+          { "numero": 2, "valor": 963.67, "vencimento": "10/01/2026", "paga": true },
+          { "numero": 3, "valor": 963.67, "vencimento": "10/02/2026", "paga": true },
+          { "numero": 4, "valor": 963.67, "vencimento": "10/03/2026", "paga": true },
+          { "numero": 5, "valor": 963.67, "vencimento": "10/04/2026", "paga": true },
+          { "numero": 6, "valor": 963.67, "vencimento": "10/05/2026", "paga": true },
+          { "numero": 7, "valor": 963.67, "vencimento": "10/06/2026", "paga": true },
+          { "numero": 8, "valor": 963.67, "vencimento": "10/07/2026", "paga": true }
+        ]
+      },
+      {
+        "id": "obj_2",
+        "nome": "Notebook",
+        "valorTotal": 4500.00,
+        "qtd": 10,
+        "cartao": "Felipe",
+        "parcelas": [
+          { "numero": 1, "valor": 450.00, "vencimento": "10/12/2025", "paga": true },
+          { "numero": 2, "valor": 450.00, "vencimento": "10/01/2026", "paga": true },
+          { "numero": 3, "valor": 450.00, "vencimento": "10/02/2026", "paga": true },
+          { "numero": 4, "valor": 450.00, "vencimento": "10/03/2026", "paga": true },
+          { "numero": 5, "valor": 450.00, "vencimento": "10/04/2026", "paga": true },
+          { "numero": 6, "valor": 450.00, "vencimento": "10/05/2026", "paga": true },
+          { "numero": 7, "valor": 450.00, "vencimento": "10/06/2026", "paga": true },
+          { "numero": 8, "valor": 450.00, "vencimento": "10/07/2026", "paga": true },
+          { "numero": 9, "valor": 450.00, "vencimento": "10/08/2026", "paga": false },
+          { "numero": 10, "valor": 450.00, "vencimento": "10/09/2026", "paga": false }
+        ]
+      }
+    ]
+  }
+]
