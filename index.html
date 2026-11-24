@@ -66,6 +66,16 @@
             width: auto;
             margin-top: 0;
         }
+        .btn-mini {
+            padding: 4px 8px;
+            font-size: 11px;
+            width: auto;
+            margin-top: 0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-edit { background: #e0f2f1; color: #00695c; border: 1px solid #009688; }
+        .btn-del { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
         .total-info {
             background: #e0f2f1;
             padding: 12px;
@@ -114,6 +124,12 @@
             font-weight: bold;
             color: #222;
             font-size: 14px;
+            gap: 6px;
+        }
+        .objeto-acoes {
+            display: flex;
+            gap: 5px;
+            margin-top: 6px;
         }
         .badge-cartao {
             background: #009688;
@@ -121,11 +137,12 @@
             font-size: 11px;
             padding: 2px 7px;
             border-radius: 10px;
+            white-space: nowrap;
         }
         .objeto-resumo {
             font-size: 12px;
             color: #444;
-            margin: 5px 0 8px;
+            margin: 6px 0;
             display: flex;
             justify-content: space-between;
         }
@@ -140,16 +157,17 @@
             border-radius: 4px;
             font-size: 13px;
         }
-        .parcela-item input[type="checkbox"] { width: auto; margin-right: 8px; cursor: pointer; transform: scale(1.15); }
+        .parcela-item input[type="checkbox"] { width: auto; margin-left: 8px; cursor: pointer; transform: scale(1.15); }
         .paga { text-decoration: line-through; color: #777; background: #e8f5e9; }
         .sync-bar { font-size: 11px; color: #004d40; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .toggle-btn { background: none; border: none; color: #00796b; font-size: 12px; padding: 0; margin: 4px 0; width: auto; text-align: left; text-decoration: underline; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; padding: 15px; box-sizing: border-box; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; padding: 15px; box-sizing: border-box; overflow-y: auto; }
+        .parcela-edit-row { display: grid; grid-template-columns: 50px 1fr 1fr; gap: 6px; align-items: center; margin-bottom: 6px; font-size: 12px; }
+        .parcela-edit-row input { padding: 5px; font-size: 13px; }
     </style>
 </head>
 <body>
 
-<!-- Card de Resumo Geral e Projetos Ativos -->
 <div class="card">
     <div class="sync-bar">
         <span id="statusSync">Pronto</span>
@@ -158,7 +176,7 @@
 
     <div class="header">
         <span>RESUMO GERAL</span>
-        <button class="btn-sec" onclick="toggleForm()">+ Novo Objeto</button>
+        <button class="btn-sec" onclick="abrirModalNovo()">+ Novo Objeto</button>
     </div>
 
     <div class="total-info devedor-info">
@@ -170,36 +188,50 @@
         <span id="geralPago">R$ 0,00</span>
     </div>
 
-    <!-- Formulário de Cadastro (baseado no seu HTML original) -->
-    <div id="formNovo" style="display:none; border-top: 2px dashed #009688; padding-top: 10px; margin-top: 10px;">
-        <div class="header" style="font-size: 14px;">ADICIONAR OBJETO AO PROJETO</div>
+    <div id="containerProjetos" style="margin-top: 14px;"></div>
+</div>
 
-        <label>Projeto (ex: Celular Moto Razr + Notebook)</label>
-        <input type="text" id="nomeProjeto" placeholder="Agrupador do projeto" list="listaProjetosExistentes">
+<!-- Modal Adicionar / Editar Objeto -->
+<div id="modalObjeto" class="modal">
+    <div class="card" style="margin: 15px auto;">
+        <div class="header">
+            <span id="tituloModalObj">ADICIONAR OBJETO</span>
+            <button class="btn-sec" onclick="fecharModal('modalObjeto')">✕</button>
+        </div>
+
+        <input type="hidden" id="editProjIdx" value="-1">
+        <input type="hidden" id="editObjIdx" value="-1">
+
+        <label>Projeto (Agrupador)</label>
+        <input type="text" id="nomeProjeto" placeholder="Ex: Celular Moto Razr + Notebook" list="listaProjetosExistentes">
         <datalist id="listaProjetosExistentes"></datalist>
 
         <label>Nome objeto</label>
         <input type="text" id="nomeObjeto" placeholder="Ex: Notebook">
 
-        <label>Vlr Total (Moeda)</label>
-        <input type="number" step="0.01" id="vlrTotal" placeholder="0.00">
+        <label>Vlr Total (R$)</label>
+        <input type="number" step="0.01" id="vlrTotal" placeholder="0.00" oninput="recalcularPreviewParcelas()">
 
-        <label>Qtde parcelas (Inteiro - ex: 8 ou 10)</label>
-        <input type="number" id="qtdParcelas" placeholder="Ex: 10">
+        <label>Qtde parcelas (Inteiro)</label>
+        <input type="number" id="qtdParcelas" placeholder="Ex: 10" oninput="recalcularPreviewParcelas()">
 
         <label>Cartão de Crédito</label>
         <input type="text" id="cartao" placeholder="Ex: Felipe">
 
-        <label>Início (Data da 1ª Parcela)</label>
-        <input type="date" id="dataInicio">
+        <label>Data da 1ª Parcela</label>
+        <input type="date" id="dataInicio" onchange="recalcularPreviewParcelas()">
 
-        <label>Parcelas já pagas (opcional)</label>
-        <input type="number" id="qtdPagas" value="0" min="0">
+        <div id="boxAjusteParcelas" style="margin-top: 12px; border-top: 1px dashed #009688; padding-top: 10px; display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:12px; color:#00796b;">Ajuste fino por parcela (opcional):</strong>
+                <button type="button" class="btn-mini btn-edit" onclick="forcarDivisaoIgual()">Dividir igual</button>
+            </div>
+            <div id="listaEdicaoParcelas"></div>
+        </div>
 
-        <button onclick="adicionarObjeto()">Salvar e Sincronizar</button>
+        <button onclick="salvarObjetoModal()">Salvar e Sincronizar</button>
+        <button class="btn-sec" style="width:100%; margin-top:8px;" onclick="fecharModal('modalObjeto')">Cancelar</button>
     </div>
-
-    <div id="containerProjetos" style="margin-top: 14px;"></div>
 </div>
 
 <!-- Modal Configuração GitHub -->
@@ -213,7 +245,7 @@
         <label>Token (Personal Access Token)</label>
         <input type="password" id="ghToken" placeholder="ghp_...">
         <button onclick="salvarConfigGitHub()">Salvar Conexão</button>
-        <button class="btn-sec" style="width:100%; margin-top:8px;" onclick="document.getElementById('modalGitHub').style.display='none'">Fechar</button>
+        <button class="btn-sec" style="width:100%; margin-top:8px;" onclick="fecharModal('modalGitHub')">Fechar</button>
     </div>
 </div>
 
@@ -223,8 +255,8 @@ if (tg) tg.expand();
 
 let fileSha = null;
 let abertos = {};
+let parcelasTemp = [];
 
-// Exemplo inicial já estruturado com os 2 objetos (8x e 10x)
 let projetos = [
     {
         id: "proj_1",
@@ -251,14 +283,16 @@ let projetos = [
 ];
 
 function gerarListaParcelas(total, qtd, dataInicioStr, pagasIniciais = 0) {
-    const valorUnitario = Number((total / qtd).toFixed(2));
+    const valorBase = Math.floor((total / qtd) * 100) / 100;
+    const diff = Number((total - (valorBase * qtd)).toFixed(2));
     const [ano, mes, dia] = dataInicioStr.split("-").map(Number);
     const lista = [];
     for (let i = 0; i < qtd; i++) {
         const dt = new Date(ano, (mes - 1) + i, dia);
+        const val = (i === 0) ? Number((valorBase + diff).toFixed(2)) : valorBase;
         lista.push({
             numero: i + 1,
-            valor: valorUnitario,
+            valor: val,
             vencimento: dt.toLocaleDateString("pt-BR"),
             paga: (i + 1) <= pagasIniciais
         });
@@ -266,13 +300,18 @@ function gerarListaParcelas(total, qtd, dataInicioStr, pagasIniciais = 0) {
     return lista;
 }
 
-function moeda(v) {
-    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function brParaIso(dataBr) {
+    if (!dataBr || !dataBr.includes("/")) return "";
+    const [d, m, a] = dataBr.split("/");
+    return `${a}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
-function toggleForm() {
-    const f = document.getElementById("formNovo");
-    f.style.display = f.style.display === "none" ? "block" : "none";
+function moeda(v) {
+    return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function fecharModal(id) {
+    document.getElementById(id).style.display = "none";
 }
 
 function abrirConfig() {
@@ -286,7 +325,7 @@ function salvarConfigGitHub() {
     localStorage.setItem("gh_user", document.getElementById("ghUser").value.trim());
     localStorage.setItem("gh_repo", document.getElementById("ghRepo").value.trim());
     localStorage.setItem("gh_token", document.getElementById("ghToken").value.trim());
-    document.getElementById("modalGitHub").style.display = "none";
+    fecharModal("modalGitHub");
     carregarGitHub();
 }
 
@@ -349,39 +388,154 @@ async function salvarGitHub() {
     }
 }
 
-function adicionarObjeto() {
+function abrirModalNovo() {
+    document.getElementById("tituloModalObj").innerText = "NOVO OBJETO PARCELADO";
+    document.getElementById("editProjIdx").value = "-1";
+    document.getElementById("editObjIdx").value = "-1";
+    document.getElementById("nomeProjeto").value = projetos[0]?.nome || "";
+    document.getElementById("nomeObjeto").value = "";
+    document.getElementById("vlrTotal").value = "";
+    document.getElementById("qtdParcelas").value = "";
+    document.getElementById("cartao").value = "";
+    document.getElementById("dataInicio").value = "";
+    parcelasTemp = [];
+    document.getElementById("boxAjusteParcelas").style.display = "none";
+    document.getElementById("modalObjeto").style.display = "block";
+}
+
+function abrirModalEditar(pIdx, oIdx) {
+    const proj = projetos[pIdx];
+    const obj = proj.objetos[oIdx];
+
+    document.getElementById("tituloModalObj").innerText = "EDITAR OBJETO / PARCELAS";
+    document.getElementById("editProjIdx").value = pIdx;
+    document.getElementById("editObjIdx").value = oIdx;
+    document.getElementById("nomeProjeto").value = proj.nome;
+    document.getElementById("nomeObjeto").value = obj.nome;
+    document.getElementById("vlrTotal").value = obj.valorTotal;
+    document.getElementById("qtdParcelas").value = obj.qtd;
+    document.getElementById("cartao").value = obj.cartao;
+    document.getElementById("dataInicio").value = brParaIso(obj.parcelas[0]?.vencimento);
+
+    parcelasTemp = JSON.parse(JSON.stringify(obj.parcelas));
+    renderizarEdicaoParcelas();
+    document.getElementById("modalObjeto").style.display = "block";
+}
+
+function recalcularPreviewParcelas() {
+    const total = parseFloat(document.getElementById("vlrTotal").value);
+    const qtd = parseInt(document.getElementById("qtdParcelas").value);
+    const inicio = document.getElementById("dataInicio").value;
+    if (!total || !qtd || !inicio) return;
+
+    const novas = gerarListaParcelas(total, qtd, inicio, 0);
+    // Preserva status 'paga' das parcelas anteriores se existirem
+    novas.forEach((p, idx) => {
+        if (parcelasTemp[idx]) p.paga = parcelasTemp[idx].paga;
+    });
+    parcelasTemp = novas;
+    renderizarEdicaoParcelas();
+}
+
+function forcarDivisaoIgual() {
+    recalcularPreviewParcelas();
+}
+
+function renderizarEdicaoParcelas() {
+    const box = document.getElementById("boxAjusteParcelas");
+    const lista = document.getElementById("listaEdicaoParcelas");
+    if (!parcelasTemp.length) {
+        box.style.display = "none";
+        return;
+    }
+    box.style.display = "block";
+    lista.innerHTML = "";
+
+    parcelasTemp.forEach((p, idx) => {
+        const row = document.createElement("div");
+        row.className = "parcela-edit-row";
+        row.innerHTML = `
+            <span><b>${p.numero}ª</b></span>
+            <input type="text" value="${p.vencimento}" onchange="parcelasTemp[${idx}].vencimento = this.value">
+            <input type="number" step="0.01" value="${p.valor}" onchange="atualizarValorParcelaTemp(${idx}, this.value)">
+        `;
+        lista.appendChild(row);
+    });
+}
+
+function atualizarValorParcelaTemp(idx, novoVal) {
+    parcelasTemp[idx].valor = parseFloat(novoVal) || 0;
+    const somaTotal = parcelasTemp.reduce((acc, item) => acc + item.valor, 0);
+    document.getElementById("vlrTotal").value = somaTotal.toFixed(2);
+}
+
+function salvarObjetoModal() {
+    const pIdx = parseInt(document.getElementById("editProjIdx").value);
+    const oIdx = parseInt(document.getElementById("editObjIdx").value);
+
     const nomeProj = document.getElementById("nomeProjeto").value.trim();
     const nomeObj = document.getElementById("nomeObjeto").value.trim();
     const total = parseFloat(document.getElementById("vlrTotal").value);
     const qtd = parseInt(document.getElementById("qtdParcelas").value);
     const cartao = document.getElementById("cartao").value.trim() || "Cartão";
     const inicio = document.getElementById("dataInicio").value;
-    const pagas = parseInt(document.getElementById("qtdPagas").value) || 0;
 
     if (!nomeProj || !nomeObj || !total || !qtd || !inicio) {
         alert("Preencha todos os campos obrigatórios.");
         return;
     }
 
-    const novoObj = {
-        id: "obj_" + Date.now(),
+    if (parcelasTemp.length !== qtd) {
+        recalcularPreviewParcelas();
+    }
+
+    const totalReal = Number(parcelasTemp.reduce((s, p) => s + p.valor, 0).toFixed(2));
+
+    const objetoAtualizado = {
+        id: (pIdx >= 0 && oIdx >= 0) ? projetos[pIdx].objetos[oIdx].id : "obj_" + Date.now(),
         nome: nomeObj,
-        valorTotal: total,
+        valorTotal: totalReal,
         qtd: qtd,
         cartao: cartao,
-        parcelas: gerarListaParcelas(total, qtd, inicio, pagas)
+        parcelas: parcelasTemp
     };
 
-    const existente = projetos.find(p => p.nome.toLowerCase() === nomeProj.toLowerCase());
-    if (existente) {
-        existente.objetos.push(novoObj);
+    if (pIdx >= 0 && oIdx >= 0) {
+        // Se mudou o nome do projeto, move o objeto
+        if (projetos[pIdx].nome.toLowerCase() !== nomeProj.toLowerCase()) {
+            projetos[pIdx].objetos.splice(oIdx, 1);
+            if (projetos[pIdx].objetos.length === 0) projetos.splice(pIdx, 1);
+            inserirNoProjeto(nomeProj, objetoAtualizado);
+        } else {
+            projetos[pIdx].objetos[oIdx] = objetoAtualizado;
+        }
     } else {
-        projetos.push({ id: "proj_" + Date.now(), nome: nomeProj, objetos: [novoObj] });
+        inserirNoProjeto(nomeProj, objetoAtualizado);
     }
 
     renderizar();
     salvarGitHub();
-    toggleForm();
+    fecharModal("modalObjeto");
+}
+
+function inserirNoProjeto(nomeProj, obj) {
+    const existente = projetos.find(p => p.nome.toLowerCase() === nomeProj.toLowerCase());
+    if (existente) {
+        existente.objetos.push(obj);
+    } else {
+        projetos.push({ id: "proj_" + Date.now(), nome: nomeProj, objetos: [obj] });
+    }
+}
+
+function excluirObjeto(pIdx, oIdx) {
+    const nome = projetos[pIdx].objetos[oIdx].nome;
+    if (!confirm(`Deseja excluir "${nome}"?`)) return;
+    projetos[pIdx].objetos.splice(oIdx, 1);
+    if (projetos[pIdx].objetos.length === 0) {
+        projetos.splice(pIdx, 1);
+    }
+    renderizar();
+    salvarGitHub();
 }
 
 function alternarParcela(pIdx, oIdx, parcIdx) {
@@ -439,6 +593,10 @@ function renderizar() {
                 <div class="objeto-topo">
                     <span>${oIdx + 1}. ${obj.nome} (${pagasCount}/${obj.qtd}x)</span>
                     <span class="badge-cartao">${obj.cartao}</span>
+                </div>
+                <div class="objeto-acoes">
+                    <button class="btn-mini btn-edit" onclick="abrirModalEditar(${pIdx}, ${oIdx})">✏ Editar valores/parcelas</button>
+                    <button class="btn-mini btn-del" onclick="excluirObjeto(${pIdx}, ${oIdx})">🗑 Excluir</button>
                 </div>
                 <div class="objeto-resumo">
                     <span>Total: <b>${moeda(obj.valorTotal)}</b></span>
